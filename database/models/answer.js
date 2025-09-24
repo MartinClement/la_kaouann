@@ -1,7 +1,5 @@
 import { Sequelize, DataTypes } from "sequelize";
 
-import { Question } from "./index.js";
-
 const sequelize = new Sequelize({ dialect: "mysql" });
 
 const Answer = sequelize.define("Answer", {
@@ -21,6 +19,6 @@ const Answer = sequelize.define("Answer", {
   }
 });
 
-Answer.belongsTo(Question, { foreignKey: "question_id"});
+// Answer.belongsTo(Question, { foreignKey: "question_id"});
 
 export default Answer;

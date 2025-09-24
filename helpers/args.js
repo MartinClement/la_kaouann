@@ -1,6 +1,6 @@
-const parseArgs = (process) => {
+const parseArgs = (process, defaultArgs = {}) => {
   const args = process.argv.slice(2); // skip node and script path
-  const parsed = {};
+  const parsed = defaultArgs;
 
   for (let i = 0; i < args.length; i++) {
     let arg = args[i];
@@ -10,7 +10,8 @@ const parseArgs = (process) => {
       arg = arg.slice(2);
       if (arg.includes('=')) {
         const [key, value] = arg.split('=');
-        parsed[key] = value;
+        const castedValue = parseInt(value) !== NaN ? parseInt(value) : value; 
+        parsed[key] = castedValue;
       } else {
         const next = args[i + 1];
         if (next && !next.startsWith('-')) {

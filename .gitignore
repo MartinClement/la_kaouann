@@ -1,4 +1,4 @@
-database/src/questions/*
 database/node_modules
+database/src/*
 scrapper/node_modules
-scrapper/chunks
+scrapper/chunks/*

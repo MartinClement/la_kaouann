@@ -1,8 +1,5 @@
 import { Sequelize, DataTypes } from "sequelize";
 
-import { Answer } from "./index.js";
-
-
 const sequelize = new Sequelize({ dialect: "mysql" });
 
 const Question = sequelize.define("Question", {
@@ -17,6 +14,6 @@ const Question = sequelize.define("Question", {
   }
 })
 
-Question.hasMany(Answer, { foreignKey: 'question_id'});
+// Question.hasMany(Answer, { foreignKey: 'question_id'});
 
 export default Question;
