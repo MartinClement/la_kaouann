@@ -1,8 +1,7 @@
-import Consolog from "../../helpers/logs";
-
-import { Sequelize, DataTypes } from "sequelize";
+import Consolog from "../../helpers/logs.js";
 import { readFileSync, readdirSync } from "fs";
 
+import { Sequelize, DataTypes } from "sequelize";
 import { Question, Answer } from "../models/index.js";
 
 import CONFIG from "../config.js";
@@ -15,60 +14,98 @@ const logConfig = {
 };
 
 const __log = (message, type = "default") => {
-  const prefix = (type !== "default")
-    ? `[${this.__namespace.toUpperCase().replace("_", " ")}] - `
-    : "";
+  const { color, mode } = logConfig[type] || logConfig.default;
 
-  const { color, mode } = this.__logConfig[type] || this.__logConfig.default;
-
-  Consolog(`${prefix}${message}`, color, mode);
+  Consolog(message, color, mode);
 }
-
-const sequelize = new Sequelize(
-  CONFIG.MYSQL.DATABASE,
-  CONFIG.MYSQL.USER,
-  CONFIG.MYSQL.PASSWORD,
-  {
-    host: 'localhost',
-    dialect: 'mysql',
-    models: [
-      Question,
-      Answer
-    ]
-  }
-)
 
 // TEST PURPOSE
 (async () => {
+  // INIT SEQUELIZE CONNECTION
+  const sequelize = new Sequelize(
+    CONFIG.MYSQL.DATABASE,
+    CONFIG.MYSQL.USER,
+    CONFIG.MYSQL.PASSWORD,
+    {
+      host: 'localhost',
+      dialect: 'mysql'
+    }
+  );
+
+  const DEFINED_MODELS = [["Questions", Question], ["Answer"   , Answer]];
+
   // DEFINE MODELS
-  const DEFINED_MODELS = [].map((model) => {
+  DEFINED_MODELS.map(([name, model]) => {
     try {
-      __log("[DEFINE MODEL] - " + model.__namespace);
-      model.__register();
+      __log("[DEFINE MODEL] - " + name);
+      model.__define(sequelize);
+
+      return [name, model];
     } catch (error) {
-      __log("[ERROR] - " + model.__namespace + " cannot be defined", "error");
+      __log("[ERROR] - Model cannot be defined", "error");
+      __log(error);
+    }
+  });
+  
+  // DEFINE MODELS DEPENDENCIES
+  DEFINED_MODELS.forEach(([name, model]) => {
+    try {
+      __log("[DEFINE MODEL DEPENDENCIES] - " + name);
+      model.__define_dependencies(sequelize.models);
+    } catch (error) {
+      __log("[ERROR] - Model dependencies cannot be defined", "warning");
+      __log(error);
     }
   });
 
-  // DEFINE DEPENDENCIES
-  DEFINED_MODELS.forEach((model) => {
-    try {
-      __log("[DEFINE MODEL DEPENDENCIES] - " + model.__namespace);
-          model.__define_dependencies();
-    } catch (error) {
-      __log("[ERROR] - " + model.__namespace + " dependencies cannot be defined", "warning");
-    }
-  })
-  // await sequelize.sync({ force: true })
-  // console.log("✅ Database synced");
+  // SYNC MODELS
+  await sequelize.sync({ force: true });
+  __log("✅ Database synced");
+
+  // Fetch all chunks files
+  const allChunkFiles = readdirSync("../src/questions");
+  const chunkFiles = allChunkFiles.slice(0, 1);
+  __log("Chunks to be synced:");
+  __log(JSON.stringify(chunkFiles));
+
+  await Promise.all(
+    chunkFiles.map((filename) => {
+      let data = readFileSync(`../src/questions/${filename}`);
+      data = JSON.parse(data)
+
+      return Promise.all(
+        data.map(({ number, question, answers }) => {
+          return sequelize.models.Question.create({
+            number : number,
+            text   : question
+          })
+            .then(({ id: questionId }) => {
+              return Promise.all(
+                answers.map(({ value, correct }) => {
+                  return sequelize.models.Answer.create({
+                    question_id : questionId,
+                    text        : value,
+                    correct     : correct
+                  })
+                })
+              );
+            });
+        })
+      )
+    })
+  );
+
+  __log("✅ DONE");
 
 
-  // // Fetch all chunks files
-  // const chunkFiles = readdirSync("../src/questions");
-  // console.log("Chunks to be synced:");
-  // console.log(JSON.stringify(chunkFiles));
-  
 
-  // console.log("DONE ✅");
-  // process.exit(0);
+  __log("TEST QUERY", "warning");
+  const question = await sequelize.models.Question.findOne({
+    where:   { number: 101 },
+    include: [{ model: sequelize.models.Answer }]
+  });
+
+  console.log(question);
+
+  process.exit(0);
 })()

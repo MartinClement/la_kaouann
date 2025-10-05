@@ -1,39 +1,28 @@
 import { DataTypes, Model } from "sequelize";
 
-
 class QuestionModel extends Model {
-  constructor(engine) {
-    this.__instance = null;
-    this.__namespace = "question_model";
-    this.__engine    = engine;
-  }
+  static __define(engine) {
+    this.init({
+      number: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
 
-  __define() {
-    try {
-      this.__log("Define model...", "success");
-
-      this.__instance = this.engine.define("Question", {
-        number: {
-          type: DataTypes.INTEGER,
-          allowNull: false
-        },
-
-        text: {
-          type: DataTypes.STRING,
-          allowNull: false
-        }
-      });
-    } catch(error) {
-      this.__log("Error", "error");
-      this.__log(error)
+      text: {
+        type: DataTypes.STRING,
+        allowNull: false
+      }
+    }, {
+      sequelize: engine,
+      modelName: "Question",
+      tableName: "Questions"
     }
-
-    return this.__instance;
+  )
   }
 
-  __define_dependencies(models) {
-    return;
+  static __define_dependencies({ Question, Answer}) {
+    Question.hasMany(Answer, { foreignKey: 'question_id'});
   }
 }
 
-export default new QuestionModel();
+export default QuestionModel;
